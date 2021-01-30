@@ -12,12 +12,13 @@ import (
     "fmt"
     "os"
 	"encoding/json"
+	"reflect"
 )
 
 type Item struct {
-	Id     string
-    Title   string
-    Details  string
+	Id       string  `json:"id,omitempty"`
+    Title    string  `json:"title"`
+    Details  string  `json:"details"`
 }
 
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -32,10 +33,16 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 	fmt.Println("Generted item uuid: %v", itemUuid)
 
+	itemString := request.Body
+	fmt.Println(reflect.TypeOf(itemString))
+	itemStruct := Item{}
+	fmt.Println(reflect.TypeOf(itemStruct))
+	json.Unmarshal([]byte(itemString), &itemStruct)
+
     item := Item{
 		Id: itemUuid,
-        Title:   "Mow the Lawn",
-        Details:  "Complete before 10am",
+        Title:   itemStruct.Title,
+        Details:  itemStruct.Details,
     }
 
     av, err := dynamodbattribute.MarshalMap(item)

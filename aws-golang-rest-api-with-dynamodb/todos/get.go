@@ -14,9 +14,9 @@ import (
 )
 
 type Item struct {
-	Id     string
-    Title   string
-    Details  string
+	Id       string  `json:"id,omitempty"`
+    Title    string  `json:"title"`
+    Details  string  `json:"details"`
 }
 
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -34,7 +34,7 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
     result, err := svc.GetItem(&dynamodb.GetItemInput{
         TableName: aws.String(os.Getenv("DYNAMODB_TABLE")),
         Key: map[string]*dynamodb.AttributeValue{
-            "Id": {
+            "id": {
                 S: aws.String(fetchingId),
             },
         },
