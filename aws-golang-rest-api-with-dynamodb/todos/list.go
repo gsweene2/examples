@@ -5,18 +5,19 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
     "github.com/aws/aws-sdk-go/aws/session"
-    "github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 
     "fmt"
 	"os"
 	"encoding/json"
 )
 
-// type Item struct {
-// 	Id       string  `json:"id,omitempty"`
-//     Title    string  `json:"title"`
-//     Details  string  `json:"details"`
-// }
+type Item struct {
+	Id       string  `json:"id,omitempty"`
+    Title    string  `json:"title"`
+    Details  string  `json:"details"`
+}
 
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
@@ -40,16 +41,32 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
         os.Exit(1)
     }
 
-	fmt.Println("result: ", result)
+	var itemArray []Item
+	
+	for _, i := range result.Items {
+		item := Item{}
+		
+		err = dynamodbattribute.UnmarshalMap(i, &item)
 
-	res, err := json.Marshal(result)
+        if err != nil {
+            fmt.Println("Got error unmarshalling:")
+            fmt.Println(err.Error())
+            os.Exit(1)
+		}
+		
+		itemArray = append(itemArray, item)
+	}
+
+	fmt.Println("itemArray: ", itemArray)
+
+	itemArrayString, err := json.Marshal(itemArray)
 	if err != nil {
         fmt.Println("Got error marshalling result")
         fmt.Println(err.Error())
         return events.APIGatewayProxyResponse{Body: "Error getting items", StatusCode: 500}, nil
-    }
+	}
 
-	return events.APIGatewayProxyResponse{Body: string(res), StatusCode: 200}, nil
+	return events.APIGatewayProxyResponse{Body: string(itemArrayString), StatusCode: 200}, nil
 }
 
 func main() {
