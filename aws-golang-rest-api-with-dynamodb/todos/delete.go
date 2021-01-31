@@ -1,19 +1,49 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws"
+    "github.com/aws/aws-sdk-go/aws/session"
+    "github.com/aws/aws-sdk-go/service/dynamodb"
+
+    "fmt"
+	"os"
 )
 
-// Handler function Using AWS Lambda Proxy Request
-func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//Generate message that want to be sent as body
-	message := fmt.Sprintf(" { \"Message\" : \"Hello Friend \" } ")
+type Item struct {
+	Id       string  `json:"id,omitempty"`
+    Title    string  `json:"title"`
+    Details  string  `json:"details"`
+}
 
-	//Returning response with AWS Lambda Proxy Response
-	return events.APIGatewayProxyResponse{Body: message, StatusCode: 200}, nil
+func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+        SharedConfigState: session.SharedConfigEnable,
+    }))
+
+	svc := dynamodb.New(sess)
+	
+	fetchingId := request.PathParameters["id"]
+
+	input := &dynamodb.DeleteItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			"id": {
+				S: aws.String(fetchingId),
+			},
+		},
+		TableName: aws.String(os.Getenv("DYNAMODB_TABLE")),
+	}	
+	
+	_, err := svc.DeleteItem(input)
+    if err != nil {
+        fmt.Println("Got error calling DeleteItem")
+        fmt.Println(err.Error())
+        return events.APIGatewayProxyResponse{Body: "Error deleting item", StatusCode: 500}, nil
+    }
+
+	return events.APIGatewayProxyResponse{StatusCode: 204}, nil
 }
 
 func main() {
