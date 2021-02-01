@@ -19,28 +19,32 @@ type Item struct {
 
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
+	// Creating session for client
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
         SharedConfigState: session.SharedConfigEnable,
     }))
 
+	// Create DynamoDB client
 	svc := dynamodb.New(sess)
 	
-	fetchingId := request.PathParameters["id"]
+	pathParamId := request.PathParameters["id"]
 
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"id": {
-				S: aws.String(fetchingId),
+				S: aws.String(pathParamId),
 			},
 		},
 		TableName: aws.String(os.Getenv("DYNAMODB_TABLE")),
 	}	
 	
+	// DeleteItem request
 	_, err := svc.DeleteItem(input)
+
+	// Checking for errors, return error
     if err != nil {
-        fmt.Println("Got error calling DeleteItem")
-        fmt.Println(err.Error())
-        return events.APIGatewayProxyResponse{Body: "Error deleting item", StatusCode: 500}, nil
+        fmt.Println("Got error calling DeleteItem: ", err.Error())
+        return events.APIGatewayProxyResponse{Body: "Yikes", StatusCode: 500}, nil
     }
 
 	return events.APIGatewayProxyResponse{StatusCode: 204}, nil

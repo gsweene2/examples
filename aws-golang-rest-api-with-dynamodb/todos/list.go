@@ -21,10 +21,12 @@ type Item struct {
 
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
+	// Creating session for client
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
         SharedConfigState: session.SharedConfigEnable,
     }))
 
+	// Create DynamoDB client
 	svc := dynamodb.New(sess)
 	
 	// Build the query input parameters
@@ -32,13 +34,13 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		TableName:                 aws.String(os.Getenv("DYNAMODB_TABLE")),
 	}
 
-	// Make the DynamoDB Query API call
+	// Scan table
     result, err := svc.Scan(params)
 
+	// Checking for errors, return error
     if err != nil {
-        fmt.Println("Query API call failed:")
-        fmt.Println((err.Error()))
-        os.Exit(1)
+        fmt.Println("Query API call failed: ", err.Error())
+        return events.APIGatewayProxyResponse{Body: "Yikes", StatusCode: 500}, nil
     }
 
 	var itemArray []Item
@@ -49,9 +51,8 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		err = dynamodbattribute.UnmarshalMap(i, &item)
 
         if err != nil {
-            fmt.Println("Got error unmarshalling:")
-            fmt.Println(err.Error())
-            os.Exit(1)
+            fmt.Println("Got error unmarshalling: ", err.Error())
+            return events.APIGatewayProxyResponse{Body: "Yikes", StatusCode: 500}, nil
 		}
 		
 		itemArray = append(itemArray, item)
@@ -61,9 +62,8 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 	itemArrayString, err := json.Marshal(itemArray)
 	if err != nil {
-        fmt.Println("Got error marshalling result")
-        fmt.Println(err.Error())
-        return events.APIGatewayProxyResponse{Body: "Error getting items", StatusCode: 500}, nil
+        fmt.Println("Got error marshalling result: ", err.Error())
+        return events.APIGatewayProxyResponse{Body: "Yikes", StatusCode: 500}, nil
 	}
 
 	return events.APIGatewayProxyResponse{Body: string(itemArrayString), StatusCode: 200}, nil

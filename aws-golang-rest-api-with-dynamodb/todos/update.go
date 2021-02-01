@@ -9,6 +9,7 @@ import (
 
     "fmt"
 	"os"
+	"encoding/json"
 )
 
 type Item struct {
@@ -19,38 +20,29 @@ type Item struct {
 
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
+	// Creating session for client
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
         SharedConfigState: session.SharedConfigEnable,
     }))
 
+	// Create DynamoDB client
 	svc := dynamodb.New(sess)
 	
-	fetchingId := request.PathParameters["id"]
+	pathParamId := request.PathParameters["id"]
+
+	itemString := request.Body
+	itemStruct := Item{}
+	json.Unmarshal([]byte(itemString), &itemStruct)
 	
 	info := Item{
-		Title: "Update",
-		Details: "Success",
+		Title: itemStruct.Title,
+		Details: itemStruct.Details,
     }
 
-    // expr, err := dynamodbattribute.MarshalMap(info)
-    // if err != nil {
-    //     fmt.Println("Got error marshalling info:")
-    //     fmt.Println(err.Error())
-    //     os.Exit(1)
-    // }
+	fmt.Println("Updating title to: ", info.Title)
+	fmt.Println("Updating details to: ", info.Details)
 
-    // key, err := dynamodbattribute.MarshalMap(item)
-    // if err != nil {
-    //     fmt.Println("Got error marshalling item:")
-    //     fmt.Println(err.Error())
-    //     os.Exit(1)
-	// }
-	
-	fmt.Println("updating info.Title: ", info.Title)
-	fmt.Println("updating info.Details: ", info.Details)
-
-
-    // Update item in table Movies
+    // Prepare input for Update Item
     input := &dynamodb.UpdateItemInput{
         ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
             ":t": {
@@ -63,17 +55,20 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
         TableName: aws.String(os.Getenv("DYNAMODB_TABLE")),
         Key: map[string]*dynamodb.AttributeValue{
 			"id": {
-				S: aws.String(fetchingId),
+				S: aws.String(pathParamId),
 			},
 		},
         ReturnValues:              aws.String("UPDATED_NEW"),
-        UpdateExpression:          aws.String("set Title = :t, Details = :d"),
+        UpdateExpression:          aws.String("set title = :t, details = :d"),
     }
 
-    _, err := svc.UpdateItem(input)
+	// UpdateItem request
+	_, err := svc.UpdateItem(input)
+	
+	// Checking for errors, return error
     if err != nil {
         fmt.Println(err.Error())
-        return events.APIGatewayProxyResponse{Body: string("Yikes"), StatusCode: 500}, nil
+        return events.APIGatewayProxyResponse{Body: "Yikes", StatusCode: 500}, nil
     }
 
 	return events.APIGatewayProxyResponse{Body: string("Done"), StatusCode: 200}, nil

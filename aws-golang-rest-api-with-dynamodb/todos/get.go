@@ -11,6 +11,7 @@ import (
     "fmt"
 	"os"
 	"encoding/json"
+	"reflect"
 )
 
 type Item struct {
@@ -21,45 +22,52 @@ type Item struct {
 
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
+	// Creating session for client
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
         SharedConfigState: session.SharedConfigEnable,
     }))
 
+	// Create DynamoDB client
 	svc := dynamodb.New(sess)
 	
-	fetchingId := request.PathParameters["id"]
+	// Getting id from path parameters
+	pathParamId := request.PathParameters["id"]
 	
-	fmt.Println("Derived fetchingId from path params: ", fetchingId)
+	fmt.Println("Derived pathParamId from path params: ", pathParamId)
 
+	// GetItem request
     result, err := svc.GetItem(&dynamodb.GetItemInput{
         TableName: aws.String(os.Getenv("DYNAMODB_TABLE")),
         Key: map[string]*dynamodb.AttributeValue{
             "id": {
-                S: aws.String(fetchingId),
+                S: aws.String(pathParamId),
             },
         },
     })
 
+	// Checking for errors, return error
     if err != nil {
         fmt.Println(err.Error())
-        return events.APIGatewayProxyResponse{Body: err.Error(), StatusCode: 500}, nil
-    }
-
+        return events.APIGatewayProxyResponse{Body: "Yikes", StatusCode: 500}, nil
+	}
+	
+	// Created item of type Item
     item := Item{}
 
+	// result is of type *dynamodb.GetItemOutput
+	// result.Item is of type map[string]*dynamodb.AttributeValue
+	// UnmarshallMap result.item into item
     err = dynamodbattribute.UnmarshalMap(result.Item, &item)
 
     if err != nil {
-        panic(fmt.Sprintf("Failed to unmarshal Record, %v", err))
-    }
-
-	fmt.Println("Found item: ", item)
+        panic(fmt.Sprintf("Failed to UnmarshalMap result.Item: ", err))
+	}
 	
-	item_marshalled, err := json.Marshal(item)
+	// Marshal to type []uint8
+	marshalledItem, err := json.Marshal(item)
 
-	fmt.Println("Returning item: ", string(item_marshalled))
-
-	return events.APIGatewayProxyResponse{Body: string(item_marshalled), StatusCode: 200}, nil
+	// Return marshalled item
+	return events.APIGatewayProxyResponse{Body: string(marshalledItem), StatusCode: 200}, nil
 }
 
 func main() {

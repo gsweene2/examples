@@ -22,6 +22,8 @@ type Item struct {
 }
 
 func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	
+	// Creating session for client
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
         SharedConfigState: session.SharedConfigEnable,
     }))
@@ -31,12 +33,10 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 	itemUuid := uuid.New().String()
 
-	fmt.Println("Generted item uuid: %v", itemUuid)
+	fmt.Println("Generated new item uuid:", itemUuid)
 
 	itemString := request.Body
-	fmt.Println(reflect.TypeOf(itemString))
 	itemStruct := Item{}
-	fmt.Println(reflect.TypeOf(itemStruct))
 	json.Unmarshal([]byte(itemString), &itemStruct)
 
     item := Item{
@@ -47,9 +47,8 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
     av, err := dynamodbattribute.MarshalMap(item)
     if err != nil {
-        fmt.Println("Error marshalling item:")
-        fmt.Println(err.Error())
-        os.Exit(1)
+        fmt.Println("Error marshalling item: ", err.Error())
+        return events.APIGatewayProxyResponse{Body: "Yikes", StatusCode: 500}, nil
     }
 
     tableName := os.Getenv("DYNAMODB_TABLE")
@@ -61,11 +60,13 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
         TableName: aws.String(tableName),
     }
 
-    _, err = svc.PutItem(input)
+	// PutItem request
+	_, err = svc.PutItem(input)
+	
+	// Checking for errors, return error
     if err != nil {
-        fmt.Println("Got error calling PutItem:")
-        fmt.Println(err.Error())
-        os.Exit(1)
+        fmt.Println("Got error calling PutItem: ", err.Error())
+        return events.APIGatewayProxyResponse{Body: "Yikes", StatusCode: 500}, nil
 	}
 	
 	item_marshalled, err := json.Marshal(item)
