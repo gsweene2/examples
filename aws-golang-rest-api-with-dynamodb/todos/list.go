@@ -48,6 +48,9 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	for _, i := range result.Items {
 		item := Item{}
 
+		// result is of type *dynamodb.GetItemOutput
+		// result.Item is of type map[string]*dynamodb.AttributeValue
+		// UnmarshallMap result.item to item
 		err = dynamodbattribute.UnmarshalMap(i, &item)
 
 		if err != nil {
