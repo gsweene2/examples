@@ -12,3 +12,10 @@ clean:
 
 deploy: clean build
 	sls deploy --verbose
+
+format: 
+	gofmt -w todos/create.go
+	gofmt -w todos/delete.go
+	gofmt -w todos/get.go
+	gofmt -w todos/list.go
+	gofmt -w todos/update.go
